@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="default">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.2" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="tornado,framework,python," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.2" />
+
+
+
+
+
+
+<meta name="description" content="Tornado 是 Python 的 Web Framework，并且也是一个 Async Network Library（异步网络库）。最早是用 friendfeed.com（现在已经关闭）。通过使用非阻塞网络 I/O，Tornado 可以支持数万连接，很适合用于 Long Polling（长轮询）、WebSockets 这类应用。">
+<meta name="keywords" content="tornado,framework,python">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tornado 源码解读: IOLoop">
+<meta property="og:url" content="http://fatelei.github.io/2015/08/08/Tornado-IOLoop/index.html">
+<meta property="og:site_name" content="在这里留下心情">
+<meta property="og:description" content="Tornado 是 Python 的 Web Framework，并且也是一个 Async Network Library（异步网络库）。最早是用 friendfeed.com（现在已经关闭）。通过使用非阻塞网络 I/O，Tornado 可以支持数万连接，很适合用于 Long Polling（长轮询）、WebSockets 这类应用。">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2017-08-20T13:55:47.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Tornado 源码解读: IOLoop">
+<meta name="twitter:description" content="Tornado 是 Python 的 Web Framework，并且也是一个 Async Network Library（异步网络库）。最早是用 friendfeed.com（现在已经关闭）。通过使用非阻塞网络 I/O，Tornado 可以支持数万连接，很适合用于 Long Polling（长轮询）、WebSockets 这类应用。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://fatelei.github.io/2015/08/08/Tornado-IOLoop/"/>
+
+
+
+
+
+  <title>Tornado 源码解读: IOLoop | 在这里留下心情</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">在这里留下心情</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://fatelei.github.io/2015/08/08/Tornado-IOLoop/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="王小磊">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="在这里留下心情">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Tornado 源码解读: IOLoop</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2015-08-08T20:40:32+08:00">
+                2015-08-08
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>Tornado 是 Python 的 Web Framework，并且也是一个 Async Network Library（异步网络库）。最早是用 friendfeed.com（现在已经关闭）。通过使用非阻塞网络 I/O，Tornado 可以支持数万连接，很适合用于 Long Polling（长轮询）、WebSockets 这类应用。</p>
+</blockquote>
+<a id="more"></a>
+<p>下面是用 Tornado 实现的一个简单的 Hello World Server：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line">#!/usr/bin/env python</div><div class="line"># -*-coding: utf8-*-</div><div class="line"></div><div class="line">import tornado.ioloop</div><div class="line"></div><div class="line">from tornado.web import Application</div><div class="line">from tornado.web import RequestHandler</div><div class="line"></div><div class="line"></div><div class="line">class HelloWorldHandler(RequestHandler):</div><div class="line"></div><div class="line">    def get(self):</div><div class="line">        return self.write(&quot;Hello World&quot;)</div><div class="line"></div><div class="line"></div><div class="line">handlers = [</div><div class="line">    (r&apos;/&apos;, HelloWorldHandler)</div><div class="line">]</div><div class="line"></div><div class="line">if __name__ == &quot;__main__&quot;:</div><div class="line">    app = Application(handlers)</div><div class="line">    app.listen(8000)</div><div class="line">    tornado.ioloop.IOLoop.instance().start()</div></pre></td></tr></table></figure>
+<p>上面的代码看起来比较简单，那么 Tornado 是怎么实现支持<em>可以支持数万连接</em>的呢？用了哪些魔法呢？<br>下面就来一探究竟（源码解读基于 Tornado &gt;= 4.0 以上的版本）。</p>
+<p>上面的代码片段，在 “__main__” Block中有这样一行代码：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">tornado.ioloop.IOLoop.instance().start()</div></pre></td></tr></table></figure></p>
+<p>这段代码的意义非常重要，Tornado 并发模型就在这下面。</p>
+<hr>
+<h2 id="tornado-ioloop-IOLoop"><a href="#tornado-ioloop-IOLoop" class="headerlink" title="tornado.ioloop.IOLoop"></a>tornado.ioloop.IOLoop</h2><p><em>IOLoop</em> 相关的代码在 <em>tornado.ioloop</em> 下，截取部分源码如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">class IOLoop(Configurable):</div><div class="line">    &quot;&quot;&quot;A level-triggered I/O loop.</div><div class="line"></div><div class="line">    We use ``epoll`` (Linux) or ``kqueue`` (BSD and Mac OS X) if they</div><div class="line">    are available, or else we fall back on select(). If you are</div><div class="line">    implementing a system that needs to handle thousands of</div><div class="line">    simultaneous connections, you should use a system that supports</div><div class="line">    either ``epoll`` or ``kqueue``.</div></pre></td></tr></table></figure></p>
+<p>可以看到 IOLoop 继承于 Configurable （该 Class 是一个工厂类），并且支持 <strong>level triggered I/O Loop</strong>（基于事件的 I/O 触发）。</p>
+<p>接下来查看其 <em>instance</em> 方法的实现，源码如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">@staticmethod</div><div class="line">def instance():</div><div class="line">    &quot;&quot;&quot;Returns a global `IOLoop` instance.</div><div class="line"></div><div class="line">    Most applications have a single, global `IOLoop` running on the</div><div class="line">    main thread.  Use this method to get this instance from</div><div class="line">    another thread.  To get the current thread&apos;s `IOLoop`, use `current()`.</div><div class="line">    &quot;&quot;&quot;</div><div class="line">    if not hasattr(IOLoop, &quot;_instance&quot;):</div><div class="line">        with IOLoop._instance_lock:</div><div class="line">            if not hasattr(IOLoop, &quot;_instance&quot;):</div><div class="line">                # New instance after double check</div><div class="line">                IOLoop._instance = IOLoop()</div><div class="line">    return IOLoop._instance</div></pre></td></tr></table></figure></p>
+<p>首先 <em>instance</em> 是一个静态方法，可以直接通过类进行调用，并且这段代码还是线程安全的。这段代码的意义是：创建了一个 <em>IOLoop</em> 的实例对象，并且赋值给 <em>IOLoop</em> 的类属性 <em>_instance</em> 。上面这段代码看上去似乎没有什么特别神奇的地方，但是不要忘了：<em>IOLoop</em> 继承自 <em>Configurable</em> 。那会不会魔法在 <em>Configurable</em> 呢？解读继续。</p>
+<hr>
+<h2 id="tornado-util-Configurable"><a href="#tornado-util-Configurable" class="headerlink" title="tornado.util.Configurable"></a>tornado.util.Configurable</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div></pre></td><td class="code"><pre><div class="line">class Configurable(object):</div><div class="line">	&quot;&quot;&quot;</div><div class="line">	....</div><div class="line">	&quot;&quot;&quot;</div><div class="line"></div><div class="line">	__impl_class = None</div><div class="line">    __impl_kwargs = None</div><div class="line"></div><div class="line">    def __new__(cls, **kwargs):</div><div class="line">        base = cls.configurable_base()</div><div class="line">        args = &#123;&#125;</div><div class="line">        if cls is base:</div><div class="line">            impl = cls.configured_class()</div><div class="line">            if base.__impl_kwargs:</div><div class="line">                args.update(base.__impl_kwargs)</div><div class="line">        else:</div><div class="line">            impl = cls</div><div class="line">        args.update(kwargs)</div><div class="line">        instance = super(Configurable, cls).__new__(impl)</div><div class="line">        # initialize vs __init__ chosen for compatiblity with AsyncHTTPClient</div><div class="line">        # singleton magic.  If we get rid of that we can switch to __init__</div><div class="line">        # here too.</div><div class="line">        instance.initialize(**args)</div><div class="line">        return instance</div></pre></td></tr></table></figure>
+<p>已经快要接近魔法了，可以看到在 <em>Configurable</em> 中重写了方法 <em>__new__</em>。在 Python 中，创建一个实例对象，是通过方法 <em>__new__</em>。所以执行 <em>IOLoop()</em> 时，其默认的行为已经被修改了。现在来逐行解读吧（这里的 cls 指向 IOLoop）：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">base = cls.configurable_base()</div></pre></td></tr></table></figure></p>
+<p>这里会调用 <em>IOLoop</em> 中的方法 <em>configurable_base</em>，相关代码如下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">@classmethod</div><div class="line">def configurable_base(cls):</div><div class="line">    return IOLoop</div></pre></td></tr></table></figure></p>
+<p>所以执行完之后 <em>base</em> 的值为 <em>IOLoop</em>，接着：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">if cls is base:</div><div class="line">    impl = cls.configured_class()</div><div class="line">    if base.__impl_kwargs:</div><div class="line">        args.update(base.__impl_kwargs)</div><div class="line">else:</div><div class="line">    impl = cls</div></pre></td></tr></table></figure></p>
+<p>上面的 <em>if</em> 条件检查会成功，然后 <em>impl</em> 的值为，从下面的代码中获取:</p>
+<h3 id="tornado-ioloop-IOLoop-1"><a href="#tornado-ioloop-IOLoop-1" class="headerlink" title="tornado.ioloop.IOLoop"></a>tornado.ioloop.IOLoop</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line">@classmethod</div><div class="line">def configurable_default(cls):</div><div class="line">    if hasattr(select, &quot;epoll&quot;):</div><div class="line">        from tornado.platform.epoll import EPollIOLoop</div><div class="line">        return EPollIOLoop</div><div class="line">    if hasattr(select, &quot;kqueue&quot;):</div><div class="line">        # Python 2.6+ on BSD or Mac</div><div class="line">        from tornado.platform.kqueue import KQueueIOLoop</div><div class="line">        return KQueueIOLoop</div><div class="line">    from tornado.platform.select import SelectIOLoop</div><div class="line">    return SelectIOLoop</div></pre></td></tr></table></figure>
+<p>所以 <em>impl</em> 会为：<em>EPollIOLoop</em>、<em>KQueueIOLoop</em>、<em>SelectIOLoop</em>中的一个，根据不同的平台或者 Python 的版本，选择合适的 IOLoop。由于本人所用的操作系统是 Linux，并且 Python 版本是 2.7.6，所以这里的 <em>impl</em> 为 <em>EPollIOLoop</em>。</p>
+<p>接着在 <em>Configurable.__new__</em> 剩下的代码为：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line">instance = super(Configurable, cls).__new__(impl)</div><div class="line"># initialize vs __init__ chosen for compatiblity with AsyncHTTPClient</div><div class="line"># singleton magic.  If we get rid of that we can switch to __init__</div><div class="line"># here too.</div><div class="line">instance.initialize(**args)</div><div class="line">return instance</div></pre></td></tr></table></figure></p>
+<p>会创建一个 <em>EPollIOLoop</em> 的实例对象，<em>EPollIOLoop</em> 是继承于 <em>tornado.ioloop.PollIOLoop</em>，然后执行  <em>tornado.ioloop.PollIOLoop</em> 中的 <em>initialize</em> 方法，然后实例对象。然后：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">tornado.ioloop.IOLoop.instance().start()</div></pre></td></tr></table></figure></p>
+<p>这段代码就会执行定义在 <em>tornado.ioloop.PollIOLoop</em> 的 <em>start</em> 方法，分析继续。</p>
+<hr>
+<h2 id="tornado-ioloop-PollIOLoop"><a href="#tornado-ioloop-PollIOLoop" class="headerlink" title="tornado.ioloop.PollIOLoop"></a>tornado.ioloop.PollIOLoop</h2><p>由于 <em>start</em> 的方法中代码过长，这里就只提取最主要的代码：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line">try:</div><div class="line">    event_pairs = self._impl.poll(poll_timeout)</div><div class="line">    except Exception as e:</div><div class="line">    # Depending on python version and IOLoop implementation,</div><div class="line">    # different exception types may be thrown and there are</div><div class="line">    # two ways EINTR might be signaled:</div><div class="line">    # * e.errno == errno.EINTR</div><div class="line">    # * e.args is like (errno.EINTR, &apos;Interrupted system call&apos;)</div><div class="line">    if errno_from_exception(e) == errno.EINTR:</div><div class="line">        continue</div><div class="line">    else:</div><div class="line">        raise</div><div class="line"></div><div class="line">    if self._blocking_signal_threshold is not None:</div><div class="line">        signal.setitimer(signal.ITIMER_REAL,</div><div class="line">                         self._blocking_signal_threshold, 0)</div><div class="line"></div><div class="line">    # Pop one fd at a time from the set of pending fds and run</div><div class="line">    # its handler. Since that handler may perform actions on</div><div class="line">    # other file descriptors, there may be reentrant calls to</div><div class="line">    # this IOLoop that update self._events</div><div class="line">    self._events.update(event_pairs)</div><div class="line">    while self._events:</div><div class="line">        fd, events = self._events.popitem()</div><div class="line">        try:</div><div class="line">            fd_obj, handler_func = self._handlers[fd]</div><div class="line">            handler_func(fd_obj, events)</div><div class="line">        except (OSError, IOError) as e:</div><div class="line">            if errno_from_exception(e) == errno.EPIPE:</div><div class="line">                # Happens when the client closes the connection</div><div class="line">                pass</div><div class="line">            else:</div><div class="line">                self.handle_callback_exception(self._handlers.get(fd))</div><div class="line">        except Exception:</div><div class="line">                self.handle_callback_exception(self._handlers.get(fd))</div><div class="line">    fd_obj = handler_func = None</div><div class="line">finally:</div><div class="line">    # reset the stopped flag so another start/stop pair can be issued</div><div class="line">    self._stopped = False</div><div class="line">    if self._blocking_signal_threshold is not None:</div><div class="line">        signal.setitimer(signal.ITIMER_REAL, 0, 0)</div><div class="line">    IOLoop._current.instance = old_current</div><div class="line">    if old_wakeup_fd is not None:</div><div class="line">        signal.set_wakeup_fd(old_wakeup_fd)</div></pre></td></tr></table></figure></p>
+<p>最核心的代码就是这个了 <strong>event_pairs = self._impl.poll(poll_timeout)</strong> ，这里实际上就是使用了<a href="http://linux.die.net/man/4/epoll" target="_blank" rel="external">epoll</a>，用 epoll 来通知上面的的应用程序，哪些 fd 可读/可写/出错，由于 epoll 本身可以很好的 scales 大量需要检测的 fd(s)，这样 Tornado Server 可以一次接受比较多的连接的请求。可以说：Tornado 本身是一个 event loop + callback 的 Web Framework。</p>
+<hr>
+<p>后面会带来 <em>tornado.iostream</em> 模块的分析，这个也是 <em>Tornado</em> 的核心模块。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/tornado/" rel="tag"># tornado</a>
+          
+            <a href="/tags/framework/" rel="tag"># framework</a>
+          
+            <a href="/tags/python/" rel="tag"># python</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/08/03/Haproxy-Introduction/" rel="next" title="Haproxy Introduction">
+                <i class="fa fa-chevron-left"></i> Haproxy Introduction
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/08/11/Css-Box-Model/" rel="prev" title="Css Box Model">
+                Css Box Model <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="王小磊" />
+          <p class="site-author-name" itemprop="name">王小磊</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">posts</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">tags</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#tornado-ioloop-IOLoop"><span class="nav-number">1.</span> <span class="nav-text">tornado.ioloop.IOLoop</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tornado-util-Configurable"><span class="nav-number">2.</span> <span class="nav-text">tornado.util.Configurable</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#tornado-ioloop-IOLoop-1"><span class="nav-number">2.1.</span> <span class="nav-text">tornado.ioloop.IOLoop</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tornado-ioloop-PollIOLoop"><span class="nav-number">3.</span> <span class="nav-text">tornado.ioloop.PollIOLoop</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">王小磊</span>
+
+  
+</div>
+
+
+  <div class="powered-by">
+    Powered by <a class="theme-link" href="https://hexo.io">Hexo</a>
+  </div>
+
+  <span class="post-meta-divider">|</span>
+
+  <div class="theme-info">
+    Theme &mdash;
+    <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+      NexT.Muse
+    </a>
+  </div>
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.2"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.2"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

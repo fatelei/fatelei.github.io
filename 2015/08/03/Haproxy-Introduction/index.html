@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+
+
+
+  
+
+
+<html class="theme-next muse use-motion" lang="default">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+  <link href="/lib/fancybox/source/jquery.fancybox.css?v=2.1.5" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+<link href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.2" rel="stylesheet" type="text/css" />
+
+
+  <meta name="keywords" content="HAProxy," />
+
+
+
+
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.2" />
+
+
+
+
+
+
+<meta name="description" content="HAProxy 提供高可用性、负载均衡以及基于 TCP 和 HTTP 应用的代理，支持虚拟主机，并且免费。HAProxy 特别适用于那些负载特大的web站点，这些站点通常又需要会话保持或七层处理。">
+<meta name="keywords" content="HAProxy">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Haproxy Introduction">
+<meta property="og:url" content="http://fatelei.github.io/2015/08/03/Haproxy-Introduction/index.html">
+<meta property="og:site_name" content="在这里留下心情">
+<meta property="og:description" content="HAProxy 提供高可用性、负载均衡以及基于 TCP 和 HTTP 应用的代理，支持虚拟主机，并且免费。HAProxy 特别适用于那些负载特大的web站点，这些站点通常又需要会话保持或七层处理。">
+<meta property="og:locale" content="default">
+<meta property="og:updated_time" content="2017-08-20T13:55:47.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Haproxy Introduction">
+<meta name="twitter:description" content="HAProxy 提供高可用性、负载均衡以及基于 TCP 和 HTTP 应用的代理，支持虚拟主机，并且免费。HAProxy 特别适用于那些负载特大的web站点，这些站点通常又需要会话保持或七层处理。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Muse',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":12,"b2t":false,"scrollpercent":false,"onmobile":false},
+    fancybox: true,
+    tabs: true,
+    motion: true,
+    duoshuo: {
+      userId: '0',
+      author: 'Author'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://fatelei.github.io/2015/08/03/Haproxy-Introduction/"/>
+
+
+
+
+
+  <title>Haproxy Introduction | 在这里留下心情</title>
+  
+
+
+
+
+
+
+
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="default">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">在这里留下心情</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle"></p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            Home
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            Archives
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            Tags
+          </a>
+        </li>
+      
+
+      
+    </ul>
+  
+
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://fatelei.github.io/2015/08/03/Haproxy-Introduction/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="王小磊">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="在这里留下心情">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Haproxy Introduction</h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">Posted on</span>
+              
+              <time title="Post created" itemprop="dateCreated datePublished" datetime="2015-08-03T21:56:29+08:00">
+                2015-08-03
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+
+          
+            
+          
+
+          
+          
+
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <blockquote>
+<p>HAProxy 提供高可用性、负载均衡以及基于 TCP 和 HTTP 应用的代理，支持虚拟主机，并且免费。HAProxy 特别适用于那些负载特大的web站点，这些站点通常又需要会话保持或七层处理。</p>
+</blockquote>
+<a id="more"></a> 
+<h2 id="Install-HAProxy"><a href="#Install-HAProxy" class="headerlink" title="Install HAProxy"></a>Install HAProxy</h2><h3 id="ubuntu-14-04"><a href="#ubuntu-14-04" class="headerlink" title="ubuntu 14.04"></a>ubuntu 14.04</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line">$ echo deb http://archive.ubuntu.com/ubuntu trusty-backports main universe | \</div><div class="line">      sudo tee /etc/apt/sources.list.d/backports.list</div><div class="line">$ sudo apt-get update</div><div class="line">$ sudo apt-get install haproxy</div></pre></td></tr></table></figure>
+<h2 id="HAProxy-配置简介"><a href="#HAProxy-配置简介" class="headerlink" title="HAProxy 配置简介"></a>HAProxy 配置简介</h2><p>HAProxy 的配置主要分为三部分：</p>
+<ul>
+<li>来自命令行的参数，这些参数通常会被优先使用</li>
+<li>来自<code>global</code>section的参数，这些参数通常是影响整个 HAProxy 进程的</li>
+<li>最后是<code>proxies</code>section的参数，这些区域可以使<code>defaults</code>、<code>listen</code>、<code>frontend</code>、<code>backend</code></li>
+</ul>
+<p><code>global</code>section 处的参数，主要用于调优、以及 OS 相关的一些参数，还有访问权限相关的参数。下面主要还是围绕代理相关的一些配置进行介绍。</p>
+<h3 id="Proxy-配置"><a href="#Proxy-配置" class="headerlink" title="Proxy 配置"></a>Proxy 配置</h3><p>在 HAProxy 中 Proxy 的配置可能是和下面的一个集合的配置相关：</p>
+<ul>
+<li>defaults [name]</li>
+<li>listen [name]</li>
+<li>frontend [name]</li>
+<li>backend [name]</li>
+</ul>
+<p>以下的摘自 <a href="https://cbonte.github.io/haproxy-dconv/configuration-1.5.html#1" target="_blank" rel="external">HAProxy Manual</a></p>
+<blockquote>
+<p>A “defaults” section sets default parameters for all other sections following<br>its declaration. Those default parameters are reset by the next “defaults”<br>section. See below for the list of parameters which can be set in a “defaults”<br>section. The name is optional but its use is encouraged for better readability.</p>
+<p>A “frontend” section describes a set of listening sockets accepting client<br>connections.</p>
+<p>A “backend” section describes a set of servers to which the proxy will connect<br>to forward incoming connections.</p>
+<p>A “listen” section defines a complete proxy with its frontend and backend<br>parts combined in one section. It is generally useful for TCP-only traffic.</p>
+</blockquote>
+<h2 id="HTTP-Example"><a href="#HTTP-Example" class="headerlink" title="HTTP Example"></a>HTTP Example</h2><p>使用 HAProxy 作为 HTTP Proxy 的例子，HAPrxoy 配置文件如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">global</div><div class="line">  log /dev/log local0 notice</div><div class="line"></div><div class="line">defaults</div><div class="line">  mode http</div><div class="line">  option httplog</div><div class="line">  option dontlognull</div><div class="line">  timeout connect 1s</div><div class="line">  timeout client 1s</div><div class="line">  timeout server 1s</div><div class="line"></div><div class="line">listen http-in</div><div class="line">  bind *:80</div><div class="line">  server server1 127.0.0.1:8000 maxconn 22</div></pre></td></tr></table></figure>
+<p>HTTP Server：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line">var http = require(&apos;http&apos;);</div><div class="line"></div><div class="line">var server = http.createServer(function (req, res) &#123;</div><div class="line">  res.send(&apos;Hello World&apos;);</div><div class="line">  res.end();</div><div class="line">&#125;);</div><div class="line"></div><div class="line">server.listen(8000);</div></pre></td></tr></table></figure>
+<p>可以使用 <code>haproxy -f http.cfg</code>启动HAProxy，然后再启动相应的 HTTP Server，执行命令<br><code>curl http://127.0.0.1</code>，在控制台中会输出<code>Hello World</code>字样。</p>
+<h2 id="TCP-Example"><a href="#TCP-Example" class="headerlink" title="TCP Example"></a>TCP Example</h2><p>使用 HAProxy 作为 TCP Proxy 的例子，HAPrxoy 配置文件如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line">global</div><div class="line">  log /dev/log local0 notice</div><div class="line"></div><div class="line">defaults</div><div class="line">  mode tcp</div><div class="line">  option dontlognull</div><div class="line">  timeout connect 1s</div><div class="line">  timeout client 1s</div><div class="line">  timeout server 1s</div><div class="line"></div><div class="line">listen http-in</div><div class="line">  mode tcp</div><div class="line">  bind *:8000</div><div class="line">  server server1 127.0.0.1:9000 maxconn 22</div></pre></td></tr></table></figure>
+<p>TCP Server：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">var net = require(&apos;net&apos;);</div><div class="line"></div><div class="line">var server = net.createServer(function (socket) &#123;</div><div class="line">  socket.write(&apos;Hello World&apos;);</div><div class="line">&#125;);</div><div class="line"></div><div class="line">server.listen(9000);</div></pre></td></tr></table></figure>
+<p>可以使用 <code>haproxy -f tcp.cfg</code>启动HAProxy，然后再启动相应的 TCP Server，执行命令<br><code>telnet 127.0.0.1 8000</code>，在控制台中会输出<code>Hello World</code>字样。</p>
+<p>以上就是 HAProxy 的一个简单介绍。后面如果有更深入的研究，会在后面更新上来，：）。</p>
+
+      
+    </div>
+    
+    
+    
+
+    
+
+    
+
+    
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/HAProxy/" rel="tag"># HAProxy</a>
+          
+        </div>
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2015/08/03/Python-s-Memory-Model/" rel="next" title="Python's Memory Model">
+                <i class="fa fa-chevron-left"></i> Python's Memory Model
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2015/08/08/Tornado-IOLoop/" rel="prev" title="Tornado 源码解读: IOLoop">
+                Tornado 源码解读: IOLoop <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+
+    <div class="post-spread">
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            Table of Contents
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            Overview
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/avatar.gif"
+               alt="王小磊" />
+          <p class="site-author-name" itemprop="name">王小磊</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives/">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">posts</span>
+              </a>
+            </div>
+          
+
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-name">tags</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+
+        <div class="links-of-author motion-element">
+          
+        </div>
+
+        
+        
+
+        
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Install-HAProxy"><span class="nav-number">1.</span> <span class="nav-text">Install HAProxy</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ubuntu-14-04"><span class="nav-number">1.1.</span> <span class="nav-text">ubuntu 14.04</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HAProxy-配置简介"><span class="nav-number">2.</span> <span class="nav-text">HAProxy 配置简介</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Proxy-配置"><span class="nav-number">2.1.</span> <span class="nav-text">Proxy 配置</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HTTP-Example"><span class="nav-number">3.</span> <span class="nav-text">HTTP Example</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TCP-Example"><span class="nav-number">4.</span> <span class="nav-text">TCP Example</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" >
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">王小磊</span>
+
+  
+</div>
+
+
+  <div class="powered-by">
+    Powered by <a class="theme-link" href="https://hexo.io">Hexo</a>
+  </div>
+
+  <span class="post-meta-divider">|</span>
+
+  <div class="theme-info">
+    Theme &mdash;
+    <a class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+      NexT.Muse
+    </a>
+  </div>
+
+
+        
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script type="text/javascript" src="/lib/fastclick/lib/fastclick.min.js?v=1.0.6"></script>
+
+  
+  <script type="text/javascript" src="/lib/jquery_lazyload/jquery.lazyload.js?v=1.9.7"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+  
+  <script type="text/javascript" src="/lib/fancybox/source/jquery.fancybox.pack.js?v=2.1.5"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.2"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.2"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.2"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.2"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
