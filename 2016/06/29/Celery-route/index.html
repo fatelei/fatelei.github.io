@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="default">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"fatelei.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Celery Route 模块解读。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Celery Route">
+<meta property="og:url" content="http://fatelei.github.io/2016/06/29/Celery-route/index.html">
+<meta property="og:site_name" content="在这里留下心情">
+<meta property="og:description" content="Celery Route 模块解读。">
+<meta property="og:locale">
+<meta property="og:image" content="http://fatelei.github.io/images/celery_beat.png">
+<meta property="og:image" content="http://fatelei.github.io/images/celery_periodic.png">
+<meta property="article:published_time" content="2016-06-29T02:16:10.000Z">
+<meta property="article:modified_time" content="2020-09-06T09:14:15.121Z">
+<meta property="article:author" content="王小磊">
+<meta property="article:tag" content="Celery">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://fatelei.github.io/images/celery_beat.png">
+
+<link rel="canonical" href="http://fatelei.github.io/2016/06/29/Celery-route/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>Celery Route | 在这里留下心情</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">在这里留下心情</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="http://fatelei.github.io/2016/06/29/Celery-route/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="王小磊">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="在这里留下心情">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Celery Route
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2016-06-29 10:16:10" itemprop="dateCreated datePublished" datetime="2016-06-29T10:16:10+08:00">2016-06-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-09-06 17:14:15" itemprop="dateModified" datetime="2020-09-06T17:14:15+08:00">2020-09-06</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><a target="_blank" rel="noopener" href="http://docs.celeryproject.org/en/latest/index.html">Celery</a> Route 模块解读。</p>
+<a id="more"></a>
+
+<p>最近在线上观察时发现了有任务的队列堆积了，当时判断是同事写的 <a target="_blank" rel="noopener" href="http://docs.celeryproject.org/en/latest/userguide/periodic-tasks.html">Celery crontab</a> 任务堆积了，当时他给我看了线上的配置，他说没有指定定时任务的队列，会造成堆积，但是这个配置在线上已经运行了好几个月了，如果原因是这个，那很早之前就暴露问题了，不过本人对 Celery 还停留在会使用的阶段，一些内部细节不是很了解，所以在周末抽了时间来一探究竟。</p>
+<p>在对源码进行 <code>grep</code> 和 <code>rdb</code>（celery 的远程调试后），确定了能够解决的疑惑的位置在 <code>Celery route</code> 模块。</p>
+<p>这里结合下面一段示例代码，对 Celery route 进行解读（使用 Celery 版本为 3.1.21）。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"># -*- coding: utf8 -*-</span><br><span class="line"></span><br><span class="line">from datetime import timedelta</span><br><span class="line">from celery import Celery</span><br><span class="line"></span><br><span class="line">app &#x3D; Celery(&#39;hello&#39;, broker&#x3D;&#39;redis:&#x2F;&#x2F;localhost:6379&#39;)</span><br><span class="line">app.conf.CELERYBEAT_SCHEDULE &#x3D; &#123;</span><br><span class="line">    &quot;add-every-30-seconds&quot;: &#123;</span><br><span class="line">        &quot;task&quot;: &quot;celery_app.hello&quot;,</span><br><span class="line">        &quot;schedule&quot;: timedelta(seconds&#x3D;30)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">app.conf.CELERY_ROUTES &#x3D; &#123;</span><br><span class="line">    &quot;celery_app.hello&quot;: &#123;</span><br><span class="line">        &quot;queue&quot;: &quot;test&quot;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">app.conf.CELERY_TIMEZONE &#x3D; &quot;Asia&#x2F;Shanghai&quot;</span><br><span class="line"></span><br><span class="line">@app.task</span><br><span class="line">def hello():</span><br><span class="line">    return &#39;hello world&#39;</span><br></pre></td></tr></table></figure>
+
+<p><code>PS: 这里示例代码虽然是演示 Periodic，但是对于普通 Task 也一样。</code></p>
+<p>运行后截图：</p>
+<ul>
+<li>Celery beat</li>
+</ul>
+<p><img src="/images/celery_beat.png" alt="celery beat"></p>
+<ul>
+<li>Celery Periodic Task</li>
+</ul>
+<p><img src="/images/celery_periodic.png" alt="celery periodic task"></p>
+<p>可以看到控制台中，task 会每隔 30s 运行一次，并返回 <code>hello world</code>。</p>
+<p>那接下来，我们就开始讲解 <code>Celery Route</code> 吧。<br>在上面的代码中，有一段这样的配置代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">app.conf.CELERY_ROUTES &#x3D; &#123;</span><br><span class="line">    &quot;celery_app.hello&quot;: &#123;</span><br><span class="line">        &quot;queue&quot;: &quot;test&quot;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面的代码的意思是，在 <code>celery_app</code> 这个 Celery application 下，名为 <code>hello</code> 的任务，只消耗来自于队列 <code>test</code> 的任务。</p>
+<h2 id="Celery-Beat"><a href="#Celery-Beat" class="headerlink" title="Celery Beat"></a><code>Celery Beat</code></h2><p>这里把 <code>Celery Beat</code> 的调用链抽象出来，大致的流程如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tick -&gt; send scheduler -&gt; send to task</span><br></pre></td></tr></table></figure>
+
+<p>这里主要关注 <code>send to task</code> 这步，而这步主要使用 <code>Celery</code> 对象中定义的 <code>send_task</code> 方法。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line">def send_task(self, name, args&#x3D;None, kwargs&#x3D;None, countdown&#x3D;None,</span><br><span class="line">                  eta&#x3D;None, task_id&#x3D;None, producer&#x3D;None, connection&#x3D;None,</span><br><span class="line">                  router&#x3D;None, result_cls&#x3D;None, expires&#x3D;None,</span><br><span class="line">                  publisher&#x3D;None, link&#x3D;None, link_error&#x3D;None,</span><br><span class="line">                  add_to_parent&#x3D;True, group_id&#x3D;None, retries&#x3D;0, chord&#x3D;None,</span><br><span class="line">                  reply_to&#x3D;None, time_limit&#x3D;None, soft_time_limit&#x3D;None,</span><br><span class="line">                  root_id&#x3D;None, parent_id&#x3D;None, route_name&#x3D;None,</span><br><span class="line">                  shadow&#x3D;None, chain&#x3D;None, **options):</span><br><span class="line">        &quot;&quot;&quot;Send task by name.</span><br><span class="line"></span><br><span class="line">        :param name: Name of task to call (e.g. &#96;&quot;tasks.add&quot;&#96;).</span><br><span class="line">        :keyword result_cls: Specify custom result class. Default is</span><br><span class="line">            using :meth:&#96;AsyncResult&#96;.</span><br><span class="line"></span><br><span class="line">        Otherwise supports the same arguments as :meth:&#96;@-Task.apply_async&#96;.</span><br><span class="line"></span><br><span class="line">        &quot;&quot;&quot;</span><br><span class="line">        parent &#x3D; have_parent &#x3D; None</span><br><span class="line">        amqp &#x3D; self.amqp</span><br><span class="line">        task_id &#x3D; task_id or uuid()</span><br><span class="line">        producer &#x3D; producer or publisher  # XXX compat</span><br><span class="line">        router &#x3D; router or amqp.router</span><br><span class="line">        conf &#x3D; self.conf</span><br><span class="line">        if conf.task_always_eager:  # pragma: no cover</span><br><span class="line">            warnings.warn(AlwaysEagerIgnored(</span><br><span class="line">                &#39;task_always_eager has no effect on send_task&#39;,</span><br><span class="line">            ), stacklevel&#x3D;2)</span><br><span class="line">        options &#x3D; router.route(options, route_name or name, args, kwargs)</span><br><span class="line"></span><br><span class="line">        if root_id is None:</span><br><span class="line">            parent, have_parent &#x3D; self.current_worker_task, True</span><br><span class="line">            if parent:</span><br><span class="line">                root_id &#x3D; parent.request.root_id or parent.request.id</span><br><span class="line">        if parent_id is None:</span><br><span class="line">            if not have_parent:</span><br><span class="line">                parent, have_parent &#x3D; self.current_worker_task, True</span><br><span class="line">            if parent:</span><br><span class="line">                parent_id &#x3D; parent.request.id</span><br><span class="line"></span><br><span class="line">        message &#x3D; amqp.create_task_message(</span><br><span class="line">            task_id, name, args, kwargs, countdown, eta, group_id,</span><br><span class="line">            expires, retries, chord,</span><br><span class="line">            maybe_list(link), maybe_list(link_error),</span><br><span class="line">            reply_to or self.oid, time_limit, soft_time_limit,</span><br><span class="line">            self.conf.task_send_sent_event,</span><br><span class="line">            root_id, parent_id, shadow, chain,</span><br><span class="line">        )</span><br><span class="line"></span><br><span class="line">        if connection:</span><br><span class="line">            producer &#x3D; amqp.Producer(connection)</span><br><span class="line">        with self.producer_or_acquire(producer) as P:</span><br><span class="line">            self.backend.on_task_call(P, task_id)</span><br><span class="line">            amqp.send_task_message(P, name, message, **options)</span><br><span class="line">        result &#x3D; (result_cls or self.AsyncResult)(task_id)</span><br><span class="line">        if add_to_parent:</span><br><span class="line">            if not have_parent:</span><br><span class="line">                parent, have_parent &#x3D; self.current_worker_task, True</span><br><span class="line">            if parent:</span><br><span class="line">                parent.add_trail(result)</span><br><span class="line">        return result</span><br></pre></td></tr></table></figure>
+
+<p>上面和 <code>route</code> 相关的代码有：</p>
+<ul>
+<li>获取 route： router = router or amqp.router</li>
+<li>获取 route options: options = router.route(options, route_name or name, args, kwargs)</li>
+</ul>
+<h2 id="Router"><a href="#Router" class="headerlink" title="Router"></a>Router</h2><p>一般情况下，这里的 <code>router</code> 就是 <code>amqp.router</code>。而 <code>amqp.router</code>，则是 <code>celery.app.routes.Router</code> 的实例化对象。接下来我们看创建该实例化对象都做了什么，代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">def Router(self, queues&#x3D;None, create_missing&#x3D;None):</span><br><span class="line">    &quot;&quot;&quot;Return the current task router.&quot;&quot;&quot;</span><br><span class="line">    return _routes.Router(self.routes, queues or self.queues,</span><br><span class="line">                          self.app.either(&#39;CELERY_CREATE_MISSING_QUEUEES&#39;,</span><br><span class="line">                                          create_missing), app&#x3D;self.app)</span><br></pre></td></tr></table></figure>
+
+<p>这里有四个初始化参数，主要着重以下 3 个：</p>
+<ul>
+<li>self.routes</li>
+</ul>
+<p>其是一个描述符，里面存储的是路由表信息，这些路由表的信息使用以下代码获取：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">def flush_routes(self):</span><br><span class="line">    self._rtable &#x3D; _routes.prepare(self.app.conf.CELERY_ROUTES)</span><br></pre></td></tr></table></figure>
+
+<p>其中 <code>_routes</code> 是 <code>celery.app.routes</code> 模块，而路由表的信息，则有 <code>CELERY_ROUTES</code> 提供，其中 <code>prepare</code> 方法定义如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">def prepare(routes):</span><br><span class="line">    &quot;&quot;&quot;Expands the :setting:&#96;CELERY_ROUTES&#96; setting.&quot;&quot;&quot;</span><br><span class="line">    def expand_route(route):</span><br><span class="line">        if isinstance(route, dict):</span><br><span class="line">            return MapRoute(route)</span><br><span class="line">        if isinstance(route, string_t):</span><br><span class="line">            return mlazy(instantiate, route)</span><br><span class="line">        return route</span><br><span class="line"></span><br><span class="line">    if routes is None:</span><br><span class="line">        return ()</span><br><span class="line">    if not isinstance(routes, (list, tuple)):</span><br><span class="line">        routes &#x3D; (routes, )</span><br><span class="line">    return [expand_route(route) for route in routes]</span><br></pre></td></tr></table></figure>
+
+<p>这里主要是预先生成好，route 表的类型，由 <code>MapRoute</code> (包括了 Dict，且是默认路由类型)，其它都是自定义的路由类型，上面的例子所使用的便是 <code>MapRoute</code> 类型的路由表。</p>
+<ul>
+<li>queues or self.queues</li>
+</ul>
+<p>这里 <code>queues</code> 没有特别指明，都是默认的 <code>celery.amqp.Queues</code> 的实例化对象，其中 <code>Queues</code> 继承于 <code>dict</code>：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">@cached_property</span><br><span class="line">def queues(self):</span><br><span class="line">    &quot;&quot;&quot;Queue name⇒ declaration mapping.&quot;&quot;&quot;</span><br><span class="line">    return self.Queues(self.app.conf.CELERY_QUEUES)</span><br></pre></td></tr></table></figure>
+
+<p>在没有指定 <code>CELERY_QUEUES</code> 时，默认会创建一个名为 <code>celery</code> 默认队列：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">if not queues and conf.CELERY_DEFAULT_QUEUE:</span><br><span class="line">    queues &#x3D; (Queue(conf.CELERY_DEFAULT_QUEUE,</span><br><span class="line">                    exchange&#x3D;self.default_exchange,</span><br><span class="line">                    routing_key&#x3D;conf.CELERY_DEFAULT_ROUTING_KEY), )</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>create_missing</li>
+</ul>
+<p>这个属性很重要，特别是在生产环境中，当 <code>Celery</code> 发现 task 需要的队列不存在会自行创建相应的队列。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">def __missing__(self, name):</span><br><span class="line">    if self.create_missing:</span><br><span class="line">        return self.add(self.new_missing(name))</span><br><span class="line">    raise KeyError(name)</span><br></pre></td></tr></table></figure>
+
+<p>由于 <code>Queues</code> 是继承于 <code>dict</code>，这里 <code>override</code> 了 magic method <code>__missing__</code>，这样就可以在 <code>self.create_missing</code> 开启时，自行创建不存在的队列。</p>
+<h2 id="Router-Options"><a href="#Router-Options" class="headerlink" title="Router Options"></a>Router Options</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">options &#x3D; router.route(options, route_name or name, args, kwargs)</span><br></pre></td></tr></table></figure>
+
+<p><code>options</code> 是通过 <code>router.route</code> 进行获取的，其详细代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">def route(self, options, task, args&#x3D;(), kwargs&#x3D;&#123;&#125;):</span><br><span class="line">    options &#x3D; self.expand_destination(options)  # expands &#39;queue&#39;</span><br><span class="line">    if self.routes:</span><br><span class="line">        route &#x3D; self.lookup_route(task, args, kwargs)</span><br><span class="line">        if route:  # expands &#39;queue&#39; in route.</span><br><span class="line">            return lpmerge(self.expand_destination(route), options)</span><br><span class="line">    if &#39;queue&#39; not in options:</span><br><span class="line">        options &#x3D; lpmerge(self.expand_destination(</span><br><span class="line">                          self.app.conf.CELERY_DEFAULT_QUEUE), options)</span><br><span class="line">    return options</span><br></pre></td></tr></table></figure>
+
+<p>这里先讲解以上代码的含义，对 <code>lookup_route</code> 和 <code>expand_destination</code> 放在后面。上面的含义是首先从 <code>expand_destination</code> 中获取扩展的选项。接着检查是否由路由信息，如果有，则查找该路由信息是否含有 <code>task</code> 对应的路由信息，如果有，则将对得到的路由信息 <code>route</code> 扩展之后，与 <code>options</code> 合并之后返回；如果 <code>routes</code> 不存在，并且 <code>options</code> 没有队列的信息，则使用默认的队列 <code>celery</code>，并与原 <code>options</code> 合并之后返回。</p>
+<p>其中使用到的 <code>lookup_route</code> 和 <code>expand_destination</code> 代码如下：</p>
+<ul>
+<li>lookup_route</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">def lookup_route(self, task, args&#x3D;None, kwargs&#x3D;None):</span><br><span class="line">    return _first_route(self.routes, task, args, kwargs)</span><br></pre></td></tr></table></figure>
+
+<p>用于查询路由表信息，这里的 _first_route 方法定义如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">_first_route &#x3D; firstmethod(&#39;route_for_task&#39;)</span><br></pre></td></tr></table></figure>
+
+<p>而 firstmethod 的定义如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">def firstmethod(method):</span><br><span class="line">    &quot;&quot;&quot;Return a function that with a list of instances,</span><br><span class="line">    finds the first instance that gives a value for the given method.</span><br><span class="line"></span><br><span class="line">    The list can also contain lazy instances</span><br><span class="line">    (:class:&#96;~kombu.utils.functional.lazy&#96;.)</span><br><span class="line"></span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line"></span><br><span class="line">    def _matcher(it, *args, **kwargs):</span><br><span class="line">        for obj in it:</span><br><span class="line">            try:</span><br><span class="line">                answer &#x3D; getattr(maybe_evaluate(obj), method)(*args, **kwargs)</span><br><span class="line">            except AttributeError:</span><br><span class="line">                pass</span><br><span class="line">            else:</span><br><span class="line">                if answer is not None:</span><br><span class="line">                    return answer</span><br><span class="line"></span><br><span class="line">    return _matcher</span><br></pre></td></tr></table></figure>
+
+<p>这两段代码的含义时，<code>_first_route</code> 使用 <code>route</code> 定义的方法 <code>route_for_task</code> 在 <code>self.routes</code> 路由表中是否存在 <code>task</code> 对应的路由信息，如果有则返回，否则返回 <code>None</code>。</p>
+<ul>
+<li>expand_destination</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">def expand_destination(self, route):</span><br><span class="line">    # Route can be a queue name: convenient for direct exchanges.</span><br><span class="line">    if isinstance(route, string_t):</span><br><span class="line">        queue, route &#x3D; route, &#123;&#125;</span><br><span class="line">    else:</span><br><span class="line">        # can use defaults from configured queue, but override specific</span><br><span class="line">        # things (like the routing_key): great for topic exchanges.</span><br><span class="line">        queue &#x3D; route.pop(&#39;queue&#39;, None)</span><br><span class="line">        </span><br><span class="line">    if queue:</span><br><span class="line">        try:</span><br><span class="line">            Q &#x3D; self.queues[queue]  # noqa</span><br><span class="line">        except KeyError:</span><br><span class="line">            raise QueueNotFound(</span><br><span class="line">                &#39;Queue &#123;0!r&#125; missing from CELERY_QUEUES&#39;.format(queue))</span><br><span class="line">        # needs to be declared by publisher</span><br><span class="line">        route[&#39;queue&#39;] &#x3D; Q</span><br><span class="line">    return route</span><br></pre></td></tr></table></figure>
+
+<p>该方法的主要作用是检查 <code>self.queues</code> 是否存在 <code>queue</code> 对应的队列：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">self.queues[queue]</span><br></pre></td></tr></table></figure>
+
+<p>如果 <code>create_missing = True</code> 这里会创建 <code>missing</code> 的队列，返回的 <code>Q</code> 是 <code>kombu.Queue</code> 的实例化对象。<br>如果 <code>task</code> 指定了队列 <code>queue</code>，这里会修改路由表里面的 <code>queue</code> 会 <code>Q</code> 后返回。</p>
+<p>以上便是 <code>Celery</code> 中 <code>Route</code> 的解读。通过对源码的解读，验证了当时自己的判断是正确的堆积的并不是因为 <code>Periodic task</code> 的配置没有写 <code>queue</code> 信息。</p>
+<p>目前，我司线上的 <code>Route</code> 的配置就像我上面使用 <code>dict configuration</code> 方式进行的，而 <code>celery</code> 官方并不推荐，相反推荐的是这样的方式：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"># -*- coding: utf8 -*-</span><br><span class="line"></span><br><span class="line">from datetime import timedelta</span><br><span class="line">from celery import Celery</span><br><span class="line"></span><br><span class="line">app &#x3D; Celery(&#39;hello&#39;, broker&#x3D;&#39;redis:&#x2F;&#x2F;localhost:6379&#39;)</span><br><span class="line">app.conf.CELERYBEAT_SCHEDULE &#x3D; &#123;</span><br><span class="line">    &quot;add-every-30-seconds&quot;: &#123;</span><br><span class="line">        &quot;task&quot;: &quot;celery_app.hello&quot;,</span><br><span class="line">        &quot;schedule&quot;: timedelta(seconds&#x3D;30)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">app.conf.CELERY_TIMEZONE &#x3D; &quot;Asia&#x2F;Shanghai&quot;</span><br><span class="line"></span><br><span class="line">@app.task(queue&#x3D;test)</span><br><span class="line">def hello():</span><br><span class="line">    return &#39;hello world&#39;</span><br></pre></td></tr></table></figure>
+
+<p>这样做是利用到了 <code>CELERY_CREATE_MISSING_QUEUES</code> （默认为 <code>True</code>），自动创建不存在队列的，这样可以避免写太多冗余的配置的情况。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Celery/" rel="tag"># Celery</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2016/06/29/Elasticsearch-mapping/" rel="prev" title="Elasticsearch mapping 设计总结">
+      <i class="fa fa-chevron-left"></i> Elasticsearch mapping 设计总结
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2016/07/04/Elasticsearch-relationship-data-model-compare/" rel="next" title="Elasticsearch中三种关系模型对比">
+      Elasticsearch中三种关系模型对比 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Celery-Beat"><span class="nav-number">1.</span> <span class="nav-text">Celery Beat</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Router"><span class="nav-number">2.</span> <span class="nav-text">Router</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Router-Options"><span class="nav-number">3.</span> <span class="nav-text">Router Options</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">王小磊</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">34</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">王小磊</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

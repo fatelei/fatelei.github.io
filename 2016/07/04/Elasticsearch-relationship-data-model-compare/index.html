@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="default">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"fatelei.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="现实生活中，总会存在数据之间存在着某种关系，比如：用户 &lt;-&gt; 文章，用户 &lt;-&gt; 评论等。Elasticsearch 作为搜索引擎，在创建 Indices 时，是使用 Schema less 的数据结构。如果要在其实现不同数据的关系，官方提出了以下几种方式：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Elasticsearch中三种关系模型对比">
+<meta property="og:url" content="http://fatelei.github.io/2016/07/04/Elasticsearch-relationship-data-model-compare/index.html">
+<meta property="og:site_name" content="在这里留下心情">
+<meta property="og:description" content="现实生活中，总会存在数据之间存在着某种关系，比如：用户 &lt;-&gt; 文章，用户 &lt;-&gt; 评论等。Elasticsearch 作为搜索引擎，在创建 Indices 时，是使用 Schema less 的数据结构。如果要在其实现不同数据的关系，官方提出了以下几种方式：">
+<meta property="og:locale">
+<meta property="og:image" content="http://fatelei.github.io/images/indices_chat.png">
+<meta property="og:image" content="http://fatelei.github.io/images/search_chat.png">
+<meta property="article:published_time" content="2016-07-04T02:11:48.000Z">
+<meta property="article:modified_time" content="2020-09-06T09:14:15.123Z">
+<meta property="article:author" content="王小磊">
+<meta property="article:tag" content="Elasticsearch">
+<meta property="article:tag" content="relationship">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://fatelei.github.io/images/indices_chat.png">
+
+<link rel="canonical" href="http://fatelei.github.io/2016/07/04/Elasticsearch-relationship-data-model-compare/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>Elasticsearch中三种关系模型对比 | 在这里留下心情</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">在这里留下心情</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="http://fatelei.github.io/2016/07/04/Elasticsearch-relationship-data-model-compare/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="王小磊">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="在这里留下心情">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Elasticsearch中三种关系模型对比
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2016-07-04 10:11:48" itemprop="dateCreated datePublished" datetime="2016-07-04T10:11:48+08:00">2016-07-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-09-06 17:14:15" itemprop="dateModified" datetime="2020-09-06T17:14:15+08:00">2020-09-06</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>现实生活中，总会存在数据之间存在着某种关系，比如：用户 &lt;-&gt; 文章，用户 &lt;-&gt; 评论等。<a target="_blank" rel="noopener" href="https://www.elastic.co/">Elasticsearch</a> 作为搜索引擎，在创建 Indices 时，是使用 Schema less 的数据结构。如果要在其实现不同数据的关系，官方提出了以下几种方式：</p>
+<a id="more"></a>
+
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/guide/current/application-joins.html">Application-side joins</a></li>
+</ul>
+<p><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/guide/current/application-joins.html">https://www.elastic.co/guide/en/elasticsearch/guide/current/application-joins.html</a></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/guide/current/denormalization.html">Data denormalization</a></li>
+</ul>
+<p><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/guide/current/denormalization.html">https://www.elastic.co/guide/en/elasticsearch/guide/current/denormalization.html</a></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/guide/current/nested-objects.html">Nested objects</a></li>
+</ul>
+<p><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/guide/current/nested-objects.html">https://www.elastic.co/guide/en/elasticsearch/guide/current/nested-objects.html</a></p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/guide/current/parent-child.html">Parent/child relationships</a></li>
+</ul>
+<p><a target="_blank" rel="noopener" href="https://www.elastic.co/guide/en/elasticsearch/guide/current/parent-child.html">https://www.elastic.co/guide/en/elasticsearch/guide/current/parent-child.html</a></p>
+<p>如果对以上方式不清楚，直接点击上面的链接即可，这里就不再一一说明了，这里主要是对：<code>Application-side joins</code>、<code>Nested objects</code>、<code>Parent/child relationships</code> 三种方式进行对比，包括：索引性能和查询性能的对比。</p>
+<ul>
+<li>测试环境</li>
+</ul>
+<p><a href="/images/environment.png">environment</a></p>
+<ul>
+<li>测试的模型</li>
+</ul>
+<p>用户 &lt;-&gt; 对话：一个用户有多个对话，一个对话只能属于某个用户，用户和对话是一对多的关系。</p>
+<p>1.Application-side joins</p>
+<p>对话通过用户的 id，进行关联，mapping 如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;settings&quot;: &#123;</span><br><span class="line">        &quot;number_of_shards&quot;: 1,</span><br><span class="line">        &quot;number_of_replicas&quot;: 1</span><br><span class="line">    &#125;,</span><br><span class="line">    &quot;mappings&quot;: &#123;</span><br><span class="line">        &quot;visitor&quot;: &#123;</span><br><span class="line">            &quot;properties&quot;: &#123;</span><br><span class="line">                &quot;name&quot;: &#123;</span><br><span class="line">                    &quot;type&quot;: &quot;string&quot;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        &quot;conversation&quot;: &#123;</span><br><span class="line">            &quot;properties&quot;: &#123;</span><br><span class="line">                &quot;message&quot;: &#123;</span><br><span class="line">                    &quot;type&quot;: &quot;string&quot;</span><br><span class="line">                &#125;,</span><br><span class="line">                &quot;visitor_id&quot;: &#123;</span><br><span class="line">                    &quot;type&quot;: &quot;long&quot;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>2.Nested objects</p>
+<p>把对话信息，作为 nested 字段内容，嵌入到用户数据中，mapping 如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;settings&quot;: &#123;</span><br><span class="line">        &quot;number_of_shards&quot;: 1,</span><br><span class="line">        &quot;number_of_replicas&quot;: 1</span><br><span class="line">    &#125;,</span><br><span class="line">    &quot;mappings&quot;: &#123;</span><br><span class="line">        &quot;conversation&quot;: &#123;</span><br><span class="line">            &quot;properties&quot;: &#123;</span><br><span class="line">                &quot;visitor_name&quot;: &#123;</span><br><span class="line">                    &quot;type&quot;: &quot;string&quot;</span><br><span class="line">                &#125;,</span><br><span class="line">                &quot;conversations&quot;: &#123;</span><br><span class="line">                    &quot;type&quot;: &quot;nested&quot;,</span><br><span class="line">                    &quot;properties&quot;: &#123;</span><br><span class="line">                        &quot;message&quot;: &#123;</span><br><span class="line">                            &quot;type&quot;: &quot;string&quot;</span><br><span class="line">                        &#125;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>3.Parent/child relationships</p>
+<p>使用 Elasticsearch 自带的关系模型实现，mapping 如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">    &quot;settings&quot;: &#123;</span><br><span class="line">        &quot;number_of_shards&quot;: 1,</span><br><span class="line">        &quot;number_of_replicas&quot;: 1</span><br><span class="line">    &#125;,</span><br><span class="line">    &quot;mappings&quot;: &#123;</span><br><span class="line">        &quot;visitor&quot;: &#123;</span><br><span class="line">            &quot;properties&quot;: &#123;</span><br><span class="line">                &quot;name&quot;: &#123;</span><br><span class="line">                    &quot;type&quot;: &quot;string&quot;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;,</span><br><span class="line">        &quot;conversation&quot;: &#123;</span><br><span class="line">            &quot;_parent&quot;: &#123;</span><br><span class="line">                &quot;type&quot;: &quot;visitor&quot;</span><br><span class="line">            &#125;,</span><br><span class="line">            &quot;properties&quot;: &#123;</span><br><span class="line">                &quot;message&quot;: &#123;</span><br><span class="line">                    &quot;type&quot;: &quot;string&quot;</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+
+<ul>
+<li>测试结果</li>
+</ul>
+<p>1.索引性能</p>
+<p><img src="/images/indices_chat.png" alt="indices_chat"></p>
+<p>2.查询性能</p>
+<p><img src="/images/search_chat.png" alt="search_chat"></p>
+<ul>
+<li>总结</li>
+</ul>
+<p>从性能上 <code>Nested objects</code> 的性能都完胜 <code>Application-side joins</code> 和 <code>Parent/child relationships</code>。<br><code>nested</code> 的缺点是，查询出来的数据是整个 <code>document</code>，所以还需要在应用程序中做额外的过滤操作。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Elasticsearch/" rel="tag"># Elasticsearch</a>
+              <a href="/tags/relationship/" rel="tag"># relationship</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2016/06/29/Celery-route/" rel="prev" title="Celery Route">
+      <i class="fa fa-chevron-left"></i> Celery Route
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2016/10/22/Cassandra-cluster-rolling-update/" rel="next" title="Cassandra cluster rolling update.">
+      Cassandra cluster rolling update. <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">王小磊</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">34</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">王小磊</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

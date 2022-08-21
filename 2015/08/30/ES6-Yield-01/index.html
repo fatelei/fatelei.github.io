@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="default">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"fatelei.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="在 ES6 中引入的众多特性中，yield 无疑是很吸引笔者的。JavaScript 提供的 yield 首先让笔者联想到的是 Python 中提供的 yield。熟悉 Python 的同学，应该都知道，yield 可以用来做：包一个函数转变为 generator、可以使用 yield 实现 cooperative task。哪 JavaScript 中提供的 yield 可以用来做什么呢，后面会">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ES6: Yield Part 1">
+<meta property="og:url" content="http://fatelei.github.io/2015/08/30/ES6-Yield-01/index.html">
+<meta property="og:site_name" content="在这里留下心情">
+<meta property="og:description" content="在 ES6 中引入的众多特性中，yield 无疑是很吸引笔者的。JavaScript 提供的 yield 首先让笔者联想到的是 Python 中提供的 yield。熟悉 Python 的同学，应该都知道，yield 可以用来做：包一个函数转变为 generator、可以使用 yield 实现 cooperative task。哪 JavaScript 中提供的 yield 可以用来做什么呢，后面会">
+<meta property="og:locale">
+<meta property="article:published_time" content="2015-08-30T08:51:59.000Z">
+<meta property="article:modified_time" content="2020-09-06T09:14:15.122Z">
+<meta property="article:author" content="王小磊">
+<meta property="article:tag" content="ES6">
+<meta property="article:tag" content="yield">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://fatelei.github.io/2015/08/30/ES6-Yield-01/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>ES6: Yield Part 1 | 在这里留下心情</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">在这里留下心情</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="http://fatelei.github.io/2015/08/30/ES6-Yield-01/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="王小磊">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="在这里留下心情">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ES6: Yield Part 1
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2015-08-30 16:51:59" itemprop="dateCreated datePublished" datetime="2015-08-30T16:51:59+08:00">2015-08-30</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-09-06 17:14:15" itemprop="dateModified" datetime="2020-09-06T17:14:15+08:00">2020-09-06</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>在 ES6 中引入的众多特性中，<code>yield</code> 无疑是很吸引笔者的。JavaScript 提供的 <code>yield</code> 首先让笔者联想到的是 Python 中提供的 <code>yield</code>。熟悉 Python 的同学，应该都知道，<code>yield</code> 可以用来做：包一个函数转变为 <code>generator</code>、可以使用 <code>yield</code> 实现 <code>cooperative task</code>。哪 JavaScript 中提供的 <code>yield</code> 可以用来做什么呢，后面会讲到，首先来看看 ES6 中 <code>yield</code> 的基本语法吧。</p>
+<a id="more"></a>
+
+<h3 id="Yield-Syntax"><a href="#Yield-Syntax" class="headerlink" title="Yield Syntax"></a>Yield Syntax</h3><p>在使用 <code>yield</code> 时，通常是配合 <code>generator function</code> 使用，首先来看下 <code>generator function</code> 是怎么定义的，如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">function *foo () &#123;</span><br><span class="line">  ....</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>和普通的 JavaScript 中的函数，唯一的区别就是在函数的名字前面多了一个 <code>*</code>。接着就是这次的重点了，语法如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yield expression &#x2F;&#x2F; 不能是语句</span><br></pre></td></tr></table></figure>
+
+<p>配合起来就是这样的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">function *foo () &#123;</span><br><span class="line">  yield &quot;hello world&quot;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>调用 <code>generator function</code> 和 普通函数并没有什么不同，比如对于上面的 <code>generator function</code> 直接这样使用即可：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">var it &#x3D; foo();</span><br><span class="line">it.next();</span><br><span class="line">it.next();</span><br></pre></td></tr></table></figure>
+
+<p>虽然执行了 <code>foo()</code> 但是，该函数并不会立即返回，而是这样：语句执行到 <code>yield</code> 时，首先计算 <code>expression</code>，如果其有返回值，就执行通过在执行 <code>it.next()</code> 时候返回，然后函数会在 <code>yield</code> 处挂起，等待下次调用 <code>it.next()</code> 时，函数再恢复执行，直到执行完整个函数体。</p>
+<p>虽然上面 <code>generator function</code>  中，最后都没有写 <code>return</code>，但实际上在其函数体内也是可以使用 <code>return</code> 的：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">function *foo() &#123;</span><br><span class="line">  yield 1;</span><br><span class="line">  return 2;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">var it &#x3D; foo();</span><br><span class="line">console.log(it.next()); &#x2F;&#x2F; &#123;value: 1, done, false&#125;</span><br><span class="line">console.log(it.next()); &#x2F;&#x2F; &#123;value: 2, done, true&#125;</span><br></pre></td></tr></table></figure>
+<h6 id="注：在配合-for-of-使用时，最后-return-的值会被忽略掉。"><a href="#注：在配合-for-of-使用时，最后-return-的值会被忽略掉。" class="headerlink" title="注：在配合 for ... of ... 使用时，最后 return 的值会被忽略掉。"></a>注：在配合 <code>for ... of ...</code> 使用时，最后 <code>return</code> 的值会被忽略掉。</h6><p>再来看一个复杂的例子，有助于理解 <code>yield</code>：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">function *foo(x) &#123;</span><br><span class="line">  var y &#x3D; 2 * (yield (x + 1));</span><br><span class="line">  var z &#x3D; yield (y &#x2F; 2);</span><br><span class="line">  return x + y + z;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">var it &#x3D; foo(5);</span><br><span class="line">console.log(it.next()); &#x2F;&#x2F; &#123;value: 6, done: false&#125;</span><br><span class="line">console.log(it.next(12)); &#x2F;&#x2F; &#123;value: 6, done: false&#125;</span><br><span class="line">console.log(it.next(12)); &#x2F;&#x2F; &#123;value: 29, done: false&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面的例子中，在执行第一个 <code>it.next</code> 时，得到了 6，这是因为 <code>5 + 1 = 6</code> 然后将表达式的值，通过 <code>yield</code> 返回。这里执行的地一个 <code>it.next</code> 并没有提供任何参数，这是因为对于 <code>generator function</code> 第一个 <code>next</code> call 时，是因为这里还没有任何 <code>yield</code> 表达式，即使传递了参数，也会被忽略掉，并没有什么意义。</p>
+<p><code>generator function</code> 有下面两个方法：</p>
+<ul>
+<li>Yield Next</li>
+</ul>
+<p>在上面的例子中，已经开到了 <code>next</code> 函数，该函数的作用主要是：获取 <code>yield ___</code> 执行的表达式的值，并且唤醒正在等待了 <code>yield</code>，在恢复执行时，可以通过该函数传递 <code>value</code>。</p>
+<ul>
+<li>Yield Throw</li>
+</ul>
+<p>可以通过这个函数，抛出异常 <code>it.throw(&#39;xx&#39;)</code> ，抛出的异常可以在 <code>generator function</code> 中被捕获，如果没有在 <code>generator function</code> 中被捕获，异常就会被传递到当前执行 <code>it.throw(&#39;xx&#39;)</code> 的语句处：</p>
+<p>在 <code>generator function</code> 内部被捕获：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">function *foo() &#123;</span><br><span class="line">   try &#123;</span><br><span class="line">      yield;</span><br><span class="line">   &#125; catch (err) &#123;</span><br><span class="line">      console.log(err); &#x2F;&#x2F; &quot;xx&quot;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">var it &#x3D; foo();</span><br><span class="line">it.next();</span><br><span class="line">it.thow(&quot;xx&quot;);</span><br></pre></td></tr></table></figure>
+
+<p>不在 <code>generator function</code> 中被捕获：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">function *foo() &#123;</span><br><span class="line">  yield;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">var it &#x3D; foo();</span><br><span class="line">it.next();</span><br><span class="line"></span><br><span class="line">try &#123;</span><br><span class="line">  it.throw(&#39;xx&#39;);</span><br><span class="line">&#125; catch (err) &#123;</span><br><span class="line">  console.log(err); &#x2F;&#x2F; &#39;xx&#39;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Yield-Delegate"><a href="#Yield-Delegate" class="headerlink" title="Yield Delegate"></a>Yield Delegate</h3><p>通过 <code>yield *foo</code> 的方式，你可以在一个 <code>generator function</code> 中执行另外一个 <code>generator function</code>。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">function *bar() &#123;</span><br><span class="line">  yield 3;</span><br><span class="line">  yield 4;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">function *foo() &#123;</span><br><span class="line">  yield 1;&#x2F;</span><br><span class="line">  yield 2;</span><br><span class="line">  yield *bar();</span><br><span class="line">  yield 5;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">var it &#x3D; foo();</span><br><span class="line">it.next();</span><br><span class="line"></span><br><span class="line">console.log(it.next()); &#x2F;&#x2F; &#123;value: 1, done: false&#125;</span><br><span class="line">console.log(it.next()); &#x2F;&#x2F; &#123;value: 2, done: false&#125;</span><br><span class="line">console.log(it.next()); &#x2F;&#x2F; &#123;value: 3, done: false&#125;</span><br><span class="line">console.log(it.next()); &#x2F;&#x2F; &#123;value: 4, done: false&#125;</span><br><span class="line">console.log(it.next()); &#x2F;&#x2F; &#123;value: 5, done: true&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面这个例子，就是在 <code>foo</code> 中执行了 <code>bar</code>。</p>
+<p>以上就是一些 <code>yield</code> 的一些基本使用方法，那么问题来了，用 <code>yield</code> 究竟可以用来做什么了？先看一个例子：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line">var https &#x3D; require(&#39;https&#39;);</span><br><span class="line">var parse &#x3D; require(&#39;url&#39;).parse;</span><br><span class="line">var it;</span><br><span class="line"></span><br><span class="line">function asyncCall (url) &#123;</span><br><span class="line">  var options &#x3D; parse(url)</span><br><span class="line"></span><br><span class="line">  var req &#x3D; https.get(options, function (res) &#123;</span><br><span class="line">    var bufs &#x3D; [];</span><br><span class="line">    var length &#x3D; 0;</span><br><span class="line"></span><br><span class="line">    res.on(&#39;data&#39;, function (chunk) &#123;</span><br><span class="line">      bufs.push(chunk);</span><br><span class="line">      length +&#x3D; chunk.length;</span><br><span class="line">    &#125;);</span><br><span class="line"></span><br><span class="line">    res.on(&#39;end&#39;, function () &#123;</span><br><span class="line">      var tmp &#x3D; Buffer.concat(bufs, length);</span><br><span class="line">      it.next(tmp.toString());</span><br><span class="line">    &#125;);</span><br><span class="line">  &#125;);</span><br><span class="line"></span><br><span class="line">  req.on(&#39;error&#39;, function (e) &#123;</span><br><span class="line">    it.throw(e);</span><br><span class="line">  &#125;);</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">function *request(url) &#123;</span><br><span class="line">  try &#123;</span><br><span class="line">    var rst &#x3D; yield asyncCall(url);</span><br><span class="line">    console.log(rst);</span><br><span class="line">  &#125; catch (err) &#123;</span><br><span class="line">    console.error(err);</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">it &#x3D; request(&#39;https:&#x2F;&#x2F;www.baidu.com&#39;);</span><br><span class="line">it.next();</span><br></pre></td></tr></table></figure>
+
+<p>通过上面的例子是不是发现了，<code>yield</code> 可以使用在异步调用场景，然后不需要再使用 <code>callback</code> 了，避免 <code>callback hell</code>。关于 <code>yield </code> 和异步调用这块，在后面文章中再接着讨论。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/ES6/" rel="tag"># ES6</a>
+              <a href="/tags/yield/" rel="tag"># yield</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2015/08/21/About-box-sizing/" rel="prev" title="About box-sizing">
+      <i class="fa fa-chevron-left"></i> About box-sizing
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2015/08/31/Css-Draw-Triangle/" rel="next" title="Css Draw Triangle">
+      Css Draw Triangle <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Yield-Syntax"><span class="nav-number">1.</span> <span class="nav-text">Yield Syntax</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#%E6%B3%A8%EF%BC%9A%E5%9C%A8%E9%85%8D%E5%90%88-for-of-%E4%BD%BF%E7%94%A8%E6%97%B6%EF%BC%8C%E6%9C%80%E5%90%8E-return-%E7%9A%84%E5%80%BC%E4%BC%9A%E8%A2%AB%E5%BF%BD%E7%95%A5%E6%8E%89%E3%80%82"><span class="nav-number">1.0.0.1.</span> <span class="nav-text">注：在配合 for ... of ... 使用时，最后 return 的值会被忽略掉。</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Yield-Delegate"><span class="nav-number">2.</span> <span class="nav-text">Yield Delegate</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">王小磊</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">34</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">王小磊</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

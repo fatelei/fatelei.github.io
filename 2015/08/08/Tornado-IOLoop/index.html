@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="default">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"fatelei.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Tornado 是 Python 的 Web Framework，并且也是一个 Async Network Library（异步网络库）。最早是用 friendfeed.com（现在已经关闭）。通过使用非阻塞网络 I&#x2F;O，Tornado 可以支持数万连接，很适合用于 Long Polling（长轮询）、WebSockets 这类应用。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Tornado 源码解读: IOLoop">
+<meta property="og:url" content="http://fatelei.github.io/2015/08/08/Tornado-IOLoop/index.html">
+<meta property="og:site_name" content="在这里留下心情">
+<meta property="og:description" content="Tornado 是 Python 的 Web Framework，并且也是一个 Async Network Library（异步网络库）。最早是用 friendfeed.com（现在已经关闭）。通过使用非阻塞网络 I&#x2F;O，Tornado 可以支持数万连接，很适合用于 Long Polling（长轮询）、WebSockets 这类应用。">
+<meta property="og:locale">
+<meta property="article:published_time" content="2015-08-08T12:40:32.000Z">
+<meta property="article:modified_time" content="2020-09-06T09:14:15.124Z">
+<meta property="article:author" content="王小磊">
+<meta property="article:tag" content="tornado">
+<meta property="article:tag" content="framework">
+<meta property="article:tag" content="python">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://fatelei.github.io/2015/08/08/Tornado-IOLoop/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>Tornado 源码解读: IOLoop | 在这里留下心情</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">在这里留下心情</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="http://fatelei.github.io/2015/08/08/Tornado-IOLoop/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="王小磊">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="在这里留下心情">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Tornado 源码解读: IOLoop
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2015-08-08 20:40:32" itemprop="dateCreated datePublished" datetime="2015-08-08T20:40:32+08:00">2015-08-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2020-09-06 17:14:15" itemprop="dateModified" datetime="2020-09-06T17:14:15+08:00">2020-09-06</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>Tornado 是 Python 的 Web Framework，并且也是一个 Async Network Library（异步网络库）。最早是用 friendfeed.com（现在已经关闭）。通过使用非阻塞网络 I/O，Tornado 可以支持数万连接，很适合用于 Long Polling（长轮询）、WebSockets 这类应用。</p>
+</blockquote>
+<a id="more"></a>
+
+<p>下面是用 Tornado 实现的一个简单的 Hello World Server：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">#!&#x2F;usr&#x2F;bin&#x2F;env python</span><br><span class="line"># -*-coding: utf8-*-</span><br><span class="line"></span><br><span class="line">import tornado.ioloop</span><br><span class="line"></span><br><span class="line">from tornado.web import Application</span><br><span class="line">from tornado.web import RequestHandler</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">class HelloWorldHandler(RequestHandler):</span><br><span class="line"></span><br><span class="line">    def get(self):</span><br><span class="line">        return self.write(&quot;Hello World&quot;)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">handlers &#x3D; [</span><br><span class="line">    (r&#39;&#x2F;&#39;, HelloWorldHandler)</span><br><span class="line">]</span><br><span class="line"></span><br><span class="line">if __name__ &#x3D;&#x3D; &quot;__main__&quot;:</span><br><span class="line">    app &#x3D; Application(handlers)</span><br><span class="line">    app.listen(8000)</span><br><span class="line">    tornado.ioloop.IOLoop.instance().start()</span><br></pre></td></tr></table></figure>
+
+<p>上面的代码看起来比较简单，那么 Tornado 是怎么实现支持<em>可以支持数万连接</em>的呢？用了哪些魔法呢？<br>下面就来一探究竟（源码解读基于 Tornado &gt;= 4.0 以上的版本）。</p>
+<p>上面的代码片段，在 “__main__” Block中有这样一行代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tornado.ioloop.IOLoop.instance().start()</span><br></pre></td></tr></table></figure>
+<p>这段代码的意义非常重要，Tornado 并发模型就在这下面。</p>
+<hr>
+<h2 id="tornado-ioloop-IOLoop"><a href="#tornado-ioloop-IOLoop" class="headerlink" title="tornado.ioloop.IOLoop"></a>tornado.ioloop.IOLoop</h2><p><em>IOLoop</em> 相关的代码在 <em>tornado.ioloop</em> 下，截取部分源码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">class IOLoop(Configurable):</span><br><span class="line">    &quot;&quot;&quot;A level-triggered I&#x2F;O loop.</span><br><span class="line"></span><br><span class="line">    We use &#96;&#96;epoll&#96;&#96; (Linux) or &#96;&#96;kqueue&#96;&#96; (BSD and Mac OS X) if they</span><br><span class="line">    are available, or else we fall back on select(). If you are</span><br><span class="line">    implementing a system that needs to handle thousands of</span><br><span class="line">    simultaneous connections, you should use a system that supports</span><br><span class="line">    either &#96;&#96;epoll&#96;&#96; or &#96;&#96;kqueue&#96;&#96;.</span><br></pre></td></tr></table></figure>
+
+<p>可以看到 IOLoop 继承于 Configurable （该 Class 是一个工厂类），并且支持 <strong>level triggered I/O Loop</strong>（基于事件的 I/O 触发）。</p>
+<p>接下来查看其 <em>instance</em> 方法的实现，源码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">@staticmethod</span><br><span class="line">def instance():</span><br><span class="line">    &quot;&quot;&quot;Returns a global &#96;IOLoop&#96; instance.</span><br><span class="line"></span><br><span class="line">    Most applications have a single, global &#96;IOLoop&#96; running on the</span><br><span class="line">    main thread.  Use this method to get this instance from</span><br><span class="line">    another thread.  To get the current thread&#39;s &#96;IOLoop&#96;, use &#96;current()&#96;.</span><br><span class="line">    &quot;&quot;&quot;</span><br><span class="line">    if not hasattr(IOLoop, &quot;_instance&quot;):</span><br><span class="line">        with IOLoop._instance_lock:</span><br><span class="line">            if not hasattr(IOLoop, &quot;_instance&quot;):</span><br><span class="line">                # New instance after double check</span><br><span class="line">                IOLoop._instance &#x3D; IOLoop()</span><br><span class="line">    return IOLoop._instance</span><br></pre></td></tr></table></figure>
+<p>首先 <em>instance</em> 是一个静态方法，可以直接通过类进行调用，并且这段代码还是线程安全的。这段代码的意义是：创建了一个 <em>IOLoop</em> 的实例对象，并且赋值给 <em>IOLoop</em> 的类属性 <em>_instance</em> 。上面这段代码看上去似乎没有什么特别神奇的地方，但是不要忘了：<em>IOLoop</em> 继承自 <em>Configurable</em> 。那会不会魔法在 <em>Configurable</em> 呢？解读继续。</p>
+<hr>
+<h2 id="tornado-util-Configurable"><a href="#tornado-util-Configurable" class="headerlink" title="tornado.util.Configurable"></a>tornado.util.Configurable</h2><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">class Configurable(object):</span><br><span class="line">	&quot;&quot;&quot;</span><br><span class="line">	....</span><br><span class="line">	&quot;&quot;&quot;</span><br><span class="line"></span><br><span class="line">	__impl_class &#x3D; None</span><br><span class="line">    __impl_kwargs &#x3D; None</span><br><span class="line"></span><br><span class="line">    def __new__(cls, **kwargs):</span><br><span class="line">        base &#x3D; cls.configurable_base()</span><br><span class="line">        args &#x3D; &#123;&#125;</span><br><span class="line">        if cls is base:</span><br><span class="line">            impl &#x3D; cls.configured_class()</span><br><span class="line">            if base.__impl_kwargs:</span><br><span class="line">                args.update(base.__impl_kwargs)</span><br><span class="line">        else:</span><br><span class="line">            impl &#x3D; cls</span><br><span class="line">        args.update(kwargs)</span><br><span class="line">        instance &#x3D; super(Configurable, cls).__new__(impl)</span><br><span class="line">        # initialize vs __init__ chosen for compatiblity with AsyncHTTPClient</span><br><span class="line">        # singleton magic.  If we get rid of that we can switch to __init__</span><br><span class="line">        # here too.</span><br><span class="line">        instance.initialize(**args)</span><br><span class="line">        return instance</span><br></pre></td></tr></table></figure>
+<p>已经快要接近魔法了，可以看到在 <em>Configurable</em> 中重写了方法 <em>__new__</em>。在 Python 中，创建一个实例对象，是通过方法 <em>__new__</em>。所以执行 <em>IOLoop()</em> 时，其默认的行为已经被修改了。现在来逐行解读吧（这里的 cls 指向 IOLoop）：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">base &#x3D; cls.configurable_base()</span><br></pre></td></tr></table></figure>
+<p>这里会调用 <em>IOLoop</em> 中的方法 <em>configurable_base</em>，相关代码如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">@classmethod</span><br><span class="line">def configurable_base(cls):</span><br><span class="line">    return IOLoop</span><br></pre></td></tr></table></figure>
+<p>所以执行完之后 <em>base</em> 的值为 <em>IOLoop</em>，接着：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">if cls is base:</span><br><span class="line">    impl &#x3D; cls.configured_class()</span><br><span class="line">    if base.__impl_kwargs:</span><br><span class="line">        args.update(base.__impl_kwargs)</span><br><span class="line">else:</span><br><span class="line">    impl &#x3D; cls</span><br></pre></td></tr></table></figure>
+<p>上面的 <em>if</em> 条件检查会成功，然后 <em>impl</em> 的值为，从下面的代码中获取:</p>
+<h3 id="tornado-ioloop-IOLoop-1"><a href="#tornado-ioloop-IOLoop-1" class="headerlink" title="tornado.ioloop.IOLoop"></a>tornado.ioloop.IOLoop</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">@classmethod</span><br><span class="line">def configurable_default(cls):</span><br><span class="line">    if hasattr(select, &quot;epoll&quot;):</span><br><span class="line">        from tornado.platform.epoll import EPollIOLoop</span><br><span class="line">        return EPollIOLoop</span><br><span class="line">    if hasattr(select, &quot;kqueue&quot;):</span><br><span class="line">        # Python 2.6+ on BSD or Mac</span><br><span class="line">        from tornado.platform.kqueue import KQueueIOLoop</span><br><span class="line">        return KQueueIOLoop</span><br><span class="line">    from tornado.platform.select import SelectIOLoop</span><br><span class="line">    return SelectIOLoop</span><br></pre></td></tr></table></figure>
+
+<p>所以 <em>impl</em> 会为：<em>EPollIOLoop</em>、<em>KQueueIOLoop</em>、<em>SelectIOLoop</em>中的一个，根据不同的平台或者 Python 的版本，选择合适的 IOLoop。由于本人所用的操作系统是 Linux，并且 Python 版本是 2.7.6，所以这里的 <em>impl</em> 为 <em>EPollIOLoop</em>。</p>
+<p>接着在 <em>Configurable.__new__</em> 剩下的代码为：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">instance &#x3D; super(Configurable, cls).__new__(impl)</span><br><span class="line"># initialize vs __init__ chosen for compatiblity with AsyncHTTPClient</span><br><span class="line"># singleton magic.  If we get rid of that we can switch to __init__</span><br><span class="line"># here too.</span><br><span class="line">instance.initialize(**args)</span><br><span class="line">return instance</span><br></pre></td></tr></table></figure>
+<p>会创建一个 <em>EPollIOLoop</em> 的实例对象，<em>EPollIOLoop</em> 是继承于 <em>tornado.ioloop.PollIOLoop</em>，然后执行  <em>tornado.ioloop.PollIOLoop</em> 中的 <em>initialize</em> 方法，然后实例对象。然后：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tornado.ioloop.IOLoop.instance().start()</span><br></pre></td></tr></table></figure>
+<p>这段代码就会执行定义在 <em>tornado.ioloop.PollIOLoop</em> 的 <em>start</em> 方法，分析继续。</p>
+<hr>
+<h2 id="tornado-ioloop-PollIOLoop"><a href="#tornado-ioloop-PollIOLoop" class="headerlink" title="tornado.ioloop.PollIOLoop"></a>tornado.ioloop.PollIOLoop</h2><p>由于 <em>start</em> 的方法中代码过长，这里就只提取最主要的代码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">try:</span><br><span class="line">    event_pairs &#x3D; self._impl.poll(poll_timeout)</span><br><span class="line">    except Exception as e:</span><br><span class="line">    # Depending on python version and IOLoop implementation,</span><br><span class="line">    # different exception types may be thrown and there are</span><br><span class="line">    # two ways EINTR might be signaled:</span><br><span class="line">    # * e.errno &#x3D;&#x3D; errno.EINTR</span><br><span class="line">    # * e.args is like (errno.EINTR, &#39;Interrupted system call&#39;)</span><br><span class="line">    if errno_from_exception(e) &#x3D;&#x3D; errno.EINTR:</span><br><span class="line">        continue</span><br><span class="line">    else:</span><br><span class="line">        raise</span><br><span class="line"></span><br><span class="line">    if self._blocking_signal_threshold is not None:</span><br><span class="line">        signal.setitimer(signal.ITIMER_REAL,</span><br><span class="line">                         self._blocking_signal_threshold, 0)</span><br><span class="line"></span><br><span class="line">    # Pop one fd at a time from the set of pending fds and run</span><br><span class="line">    # its handler. Since that handler may perform actions on</span><br><span class="line">    # other file descriptors, there may be reentrant calls to</span><br><span class="line">    # this IOLoop that update self._events</span><br><span class="line">    self._events.update(event_pairs)</span><br><span class="line">    while self._events:</span><br><span class="line">        fd, events &#x3D; self._events.popitem()</span><br><span class="line">        try:</span><br><span class="line">            fd_obj, handler_func &#x3D; self._handlers[fd]</span><br><span class="line">            handler_func(fd_obj, events)</span><br><span class="line">        except (OSError, IOError) as e:</span><br><span class="line">            if errno_from_exception(e) &#x3D;&#x3D; errno.EPIPE:</span><br><span class="line">                # Happens when the client closes the connection</span><br><span class="line">                pass</span><br><span class="line">            else:</span><br><span class="line">                self.handle_callback_exception(self._handlers.get(fd))</span><br><span class="line">        except Exception:</span><br><span class="line">                self.handle_callback_exception(self._handlers.get(fd))</span><br><span class="line">    fd_obj &#x3D; handler_func &#x3D; None</span><br><span class="line">finally:</span><br><span class="line">    # reset the stopped flag so another start&#x2F;stop pair can be issued</span><br><span class="line">    self._stopped &#x3D; False</span><br><span class="line">    if self._blocking_signal_threshold is not None:</span><br><span class="line">        signal.setitimer(signal.ITIMER_REAL, 0, 0)</span><br><span class="line">    IOLoop._current.instance &#x3D; old_current</span><br><span class="line">    if old_wakeup_fd is not None:</span><br><span class="line">        signal.set_wakeup_fd(old_wakeup_fd)</span><br></pre></td></tr></table></figure>
+
+<p>最核心的代码就是这个了 <strong>event_pairs = self._impl.poll(poll_timeout)</strong> ，这里实际上就是使用了<a target="_blank" rel="noopener" href="http://linux.die.net/man/4/epoll">epoll</a>，用 epoll 来通知上面的的应用程序，哪些 fd 可读/可写/出错，由于 epoll 本身可以很好的 scales 大量需要检测的 fd(s)，这样 Tornado Server 可以一次接受比较多的连接的请求。可以说：Tornado 本身是一个 event loop + callback 的 Web Framework。</p>
+<hr>
+<p>后面会带来 <em>tornado.iostream</em> 模块的分析，这个也是 <em>Tornado</em> 的核心模块。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/tornado/" rel="tag"># tornado</a>
+              <a href="/tags/framework/" rel="tag"># framework</a>
+              <a href="/tags/python/" rel="tag"># python</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2015/08/03/Haproxy-Introduction/" rel="prev" title="Haproxy Introduction">
+      <i class="fa fa-chevron-left"></i> Haproxy Introduction
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2015/08/11/Css-Box-Model/" rel="next" title="Css Box Model">
+      Css Box Model <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#tornado-ioloop-IOLoop"><span class="nav-number">1.</span> <span class="nav-text">tornado.ioloop.IOLoop</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tornado-util-Configurable"><span class="nav-number">2.</span> <span class="nav-text">tornado.util.Configurable</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#tornado-ioloop-IOLoop-1"><span class="nav-number">2.1.</span> <span class="nav-text">tornado.ioloop.IOLoop</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tornado-ioloop-PollIOLoop"><span class="nav-number">3.</span> <span class="nav-text">tornado.ioloop.PollIOLoop</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">王小磊</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">34</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">王小磊</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

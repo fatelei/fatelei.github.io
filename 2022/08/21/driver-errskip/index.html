@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="default">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.1.1">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"fatelei.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="最近在使用 sqlhooks 进行 sql 执行过程中的错误指标收集，上线后发现错误数很高，基本和执行成功数一致。为此对 sqlhooks 的 onError 增加了日志，发现错误：driver: skip fast-path; continue as if unimplemented。 经过搜索引擎查询后，定位到了这个错误定义在：driver.go 这里对该错误有具体的说明： 12345ErrS">
+<meta property="og:type" content="article">
+<meta property="og:title" content="mysql driver InterpolateParams">
+<meta property="og:url" content="http://fatelei.github.io/2022/08/21/driver-errskip/index.html">
+<meta property="og:site_name" content="在这里留下心情">
+<meta property="og:description" content="最近在使用 sqlhooks 进行 sql 执行过程中的错误指标收集，上线后发现错误数很高，基本和执行成功数一致。为此对 sqlhooks 的 onError 增加了日志，发现错误：driver: skip fast-path; continue as if unimplemented。 经过搜索引擎查询后，定位到了这个错误定义在：driver.go 这里对该错误有具体的说明： 12345ErrS">
+<meta property="og:locale">
+<meta property="article:published_time" content="2022-08-21T05:32:32.000Z">
+<meta property="article:modified_time" content="2022-08-21T09:26:57.553Z">
+<meta property="article:author" content="王小磊">
+<meta property="article:tag" content="golang">
+<meta property="article:tag" content="sql">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://fatelei.github.io/2022/08/21/driver-errskip/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'default'
+  };
+</script>
+
+  <title>mysql driver InterpolateParams | 在这里留下心情</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">在这里留下心情</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="default">
+    <link itemprop="mainEntityOfPage" href="http://fatelei.github.io/2022/08/21/driver-errskip/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="王小磊">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="在这里留下心情">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          mysql driver InterpolateParams
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2022-08-21 13:32:32 / Modified: 17:26:57" itemprop="dateCreated datePublished" datetime="2022-08-21T13:32:32+08:00">2022-08-21</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>最近在使用 <a target="_blank" rel="noopener" href="https://github.com/qustavo/sqlhooks">sqlhooks</a> 进行 <code>sql</code> 执行过程中的错误<br>指标收集，上线后发现错误数很高，基本和执行成功数一致。为此对 <code>sqlhooks</code> 的 <code>onError</code> 增加了日志，<br>发现错误：<code>driver: skip fast-path; continue as if unimplemented</code>。</p>
+<p>经过搜索引擎查询后，定位到了这个错误定义在：<a target="_blank" rel="noopener" href="https://github.com/golang/go/blob/master/src/database/sql/driver/driver.go#L148">driver.go</a></p>
+<p>这里对该错误有具体的说明：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">ErrSkip may be returned by some optional interfaces&#39; methods to</span><br><span class="line">indicate at runtime that the fast path is unavailable and the sql</span><br><span class="line">package should continue as if the optional interface was not</span><br><span class="line">implemented. ErrSkip is only supported where explicitly</span><br><span class="line">documented.</span><br></pre></td></tr></table></figure>
+
+<p>大意是：ErrSkip 可以被可选 interface 的方法返回，表面在运行时 fast path 不可用。如果 interface 未实现，sql 包应该继续执行。</p>
+<p>SQL 执行经过了 <code>prepare</code> -&gt; <code>exec</code> -&gt; <code>close</code> 这三个步骤。</p>
+<p>这里已 golang 的 <code>mysql driver</code> 的 <code>query</code> 为例：</p>
+<p><code>sql</code> package 在执行 <code>query</code> 的时候，会调用对应 <code>driver</code> 实现的 <code>QueryContext</code> 进行执行，<code>mysql</code> 的 <code>QueryContext</code> 会调用 <code>query</code> 方法，该方法的代码如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(mc *mysqlConn)</span> <span class="title">query</span><span class="params">(query <span class="keyword">string</span>, args []driver.Value)</span> <span class="params">(*textRows, error)</span></span> &#123;</span><br><span class="line">	<span class="keyword">if</span> mc.closed.Load() &#123;</span><br><span class="line">		errLog.Print(ErrInvalidConn)</span><br><span class="line">		<span class="keyword">return</span> <span class="literal">nil</span>, driver.ErrBadConn</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">if</span> <span class="built_in">len</span>(args) != <span class="number">0</span> &#123;</span><br><span class="line">		<span class="keyword">if</span> !mc.cfg.InterpolateParams &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span>, driver.ErrSkip</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">// try client-side prepare to reduce roundtrip</span></span><br><span class="line">		prepared, err := mc.interpolateParams(query, args)</span><br><span class="line">		<span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">		&#125;</span><br><span class="line">		query = prepared</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// Send command</span></span><br><span class="line">	err := mc.writeCommandPacketStr(comQuery, query)</span><br><span class="line">	<span class="keyword">if</span> err == <span class="literal">nil</span> &#123;</span><br><span class="line">		<span class="comment">// Read Result</span></span><br><span class="line">		<span class="keyword">var</span> resLen <span class="keyword">int</span></span><br><span class="line">		resLen, err = mc.readResultSetHeaderPacket()</span><br><span class="line">		<span class="keyword">if</span> err == <span class="literal">nil</span> &#123;</span><br><span class="line">			rows := <span class="built_in">new</span>(textRows)</span><br><span class="line">			rows.mc = mc</span><br><span class="line"></span><br><span class="line">			<span class="keyword">if</span> resLen == <span class="number">0</span> &#123;</span><br><span class="line">				rows.rs.done = <span class="literal">true</span></span><br><span class="line"></span><br><span class="line">				<span class="keyword">switch</span> err := rows.NextResultSet(); err &#123;</span><br><span class="line">				<span class="keyword">case</span> <span class="literal">nil</span>, io.EOF:</span><br><span class="line">					<span class="keyword">return</span> rows, <span class="literal">nil</span></span><br><span class="line">				<span class="keyword">default</span>:</span><br><span class="line">					<span class="keyword">return</span> <span class="literal">nil</span>, err</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="comment">// Columns</span></span><br><span class="line">			rows.rs.columns, err = mc.readColumns(resLen)</span><br><span class="line">			<span class="keyword">return</span> rows, err</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="literal">nil</span>, mc.markBadConn(err)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当 SQL 执行的是待有参数的，如：<code>SELECT * FROM foo WHERE id = ?</code>，会先判断 <code>driver</code> 是否启用了<br><code>InterpolateParams</code>，如果没有启用，则会调用 <code>mysql</code> 执行 <a target="_blank" rel="noopener" href="https://cs.opensource.google/go/go/+/master:src/database/sql/sql.go;l=1778;drc=8d57f4dcef5d69a0a3f807afaa9625018569010b?q=QueryRow&ss=go/go">prepare</a> 逻辑；如果开启，则会在 client 侧进行 <code>prepare</code>，减少一次 <code>roundtrip</code>。</p>
+<p>因此本人对于 <code>fast path</code> 理解是指是否允许在 <code>client</code> 侧进行 <code>prepare</code> 减少一次对 <code>mysql</code> 的调用。</p>
+<p>这里有一段简单的 perf 对比：<a target="_blank" rel="noopener" href="https://github.com/fatelei/go-benchmark-result/issues/3">https://github.com/fatelei/go-benchmark-result/issues/3</a> 。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/golang/" rel="tag"># golang</a>
+              <a href="/tags/sql/" rel="tag"># sql</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2019/07/26/send-data-before-document-unload/" rel="prev" title="在 document unload 前几种发送数据的方式">
+      <i class="fa fa-chevron-left"></i> 在 document unload 前几种发送数据的方式
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">王小磊</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">34</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+        <span class="site-state-item-count">52</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2022</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">王小磊</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
